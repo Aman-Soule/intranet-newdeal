@@ -36,8 +36,8 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install trivy -y
 
-      - name: Scan image for vulnerabilities
-        run: trivy image --exit-code 0 --severity HIGH,CRITICAL ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:dev
+      - name: Scan image - Block on CRITICAL
+        run: trivy image --exit-code 1 --severity CRITICAL ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:dev
 
       - name: Scan for secrets in code
         run: trivy fs --security-checks secret --exit-code 0 .
@@ -60,3 +60,19 @@ jobs:
         run: |
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:dev .
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:dev
+
+      - name: Send email notification
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "[CI/CD] Pipeline ${{ job.status }} - intranet-newdeal"
+          to: moussawade@groupeisi.com
+          from: ${{ secrets.MAIL_USERNAME }}
+          body: |
+            Le pipeline a terminé avec le statut : ${{ job.status }}
+            Branche : ${{ github.ref }}
+            Commit : ${{ github.sha }}

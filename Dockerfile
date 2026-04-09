@@ -1,5 +1,4 @@
-FROM nginx:alpine3.23
-
+FROM nginx:alpine3.23-slim
 # Copie le site statique
 COPY . /usr/share/nginx/html
 
