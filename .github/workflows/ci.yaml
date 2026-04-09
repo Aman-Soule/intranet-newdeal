@@ -22,8 +22,12 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install trivy -y
 
-      - name: Scan image from Docker Hub
-        run: trivy image --exit-code 0 --severity HIGH,CRITICAL ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:dev
+      - name: Scan image for vulnerabilities
+        run: |
+          trivy image \
+            --exit-code 0 \
+            --severity HIGH,CRITICAL \
+            ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:dev
 
   deploy:
     name: Job 2 - Deploy on Production
@@ -31,14 +35,42 @@ jobs:
     needs: security_scan
     steps:
       - name: Pull latest image
+        shell: powershell
         run: docker pull ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:dev
 
-      - name: Stop existing container
-        run: docker stop intranet-prod || true && docker rm intranet-prod || true
+      - name: Stop and remove existing container
+        shell: powershell
+        run: |
+          docker stop intranet-prod 2>$null
+          docker rm intranet-prod 2>$null
+          exit 0
 
       - name: Run container on port 80
+        shell: powershell
         run: |
-          docker run -d \
-            --name intranet-prod \
-            -p 80:80 \
+          docker run -d `
+            --name intranet-prod `
+            -p 80:80 `
             ${{ secrets.DOCKERHUB_USERNAME }}/intranet-newdeal:dev
+
+      - name: Verify container is running
+        shell: powershell
+        run: docker ps --filter "name=intranet-prod"
+
+      - name: Send email notification
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "[CD] Pipeline ${{ job.status }} - intranet-newdeal PROD"
+          to: moussawade@groupeisi.com
+          from: ${{ secrets.MAIL_USERNAME }}
+          body: |
+            Déploiement Production terminé avec le statut : ${{ job.status }}
+            Branche : ${{ github.ref }}
+            Commit  : ${{ github.sha }}
+            Auteur  : ${{ github.actor }}
