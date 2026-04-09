@@ -31,7 +31,7 @@ jobs:
 
   deploy:
     name: Job 2 - Deploy on Production
-    runs-on: [self-hosted, runner_prod]
+    runs-on: [self-hosted, Windows, X64]
     needs: security_scan
     steps:
       - name: Pull latest image
