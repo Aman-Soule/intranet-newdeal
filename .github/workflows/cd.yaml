@@ -41,8 +41,10 @@ jobs:
       - name: Stop and remove existing container
         shell: powershell
         run: |
-          docker stop intranet-prod 2>$null
-          docker rm intranet-prod 2>$null
+          $ErrorActionPreference = 'SilentlyContinue'
+          docker stop intranet-prod
+          docker rm intranet-prod
+          $ErrorActionPreference = 'Stop'
           exit 0
 
       - name: Run container on port 80
